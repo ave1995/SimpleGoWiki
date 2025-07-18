@@ -11,8 +11,9 @@ import (
 )
 
 type Page struct {
-	Title string
-	Body  []byte
+	Title    string
+	Body     []byte
+	HTMLBody template.HTML
 }
 
 func (p *Page) save() error {
@@ -39,12 +40,30 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	}
 }
 
+var linkRegexp = regexp.MustCompile(`\[(\w+)\]`)
+
+func linkify(body []byte) template.HTML {
+	escaped := template.HTMLEscapeString(string(body))
+	linked := linkRegexp.ReplaceAllStringFunc(escaped, func(s string) string {
+		match := linkRegexp.FindStringSubmatch(s)
+		if len(match) == 2 {
+			pageName := match[1]
+			return `<a href="/view/` + pageName + `">` + pageName + `</a>`
+		}
+		return s
+	})
+	return template.HTML(linked)
+}
+
 func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	p, err := loadPage(title)
 	if err != nil {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
 		return
 	}
+
+	p.HTMLBody = linkify(p.Body)
+
 	renderTemplate(w, "view", p)
 }
 
