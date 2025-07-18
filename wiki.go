@@ -21,7 +21,7 @@ func (p *Page) save() error {
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := "data/" + title + "Page.txt"
+	filename := "data/" + title + ".txt"
 	body, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -67,6 +67,14 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/" {
+		http.Redirect(w, r, "/view/Front", http.StatusSeeOther)
+		return
+	}
+	http.NotFound(w, r)
+}
+
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
@@ -84,5 +92,6 @@ func main() {
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
+	http.HandleFunc("/", rootHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
